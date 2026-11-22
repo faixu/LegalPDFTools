@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useDropzone, FileRejection } from 'react-dropzone';
-import { Upload, FileText, AlertCircle, XCircle } from 'lucide-react';
+import { Upload, FileText, AlertCircle, XCircle, CheckCircle } from 'lucide-react';
 
 interface FileDropzoneProps {
   onFileSelect: (file: File) => void;
@@ -88,13 +88,16 @@ export function FileDropzone({
             </div>
             <div className="min-w-0">
               <p className="font-medium truncate">{currentFile.name}</p>
-              <p className="text-sm text-muted">{formatSize(currentFile.size)}</p>
+              <p className="text-sm text-slate-500">{formatSize(currentFile.size)}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             {validationError ? (
               <>
-                <span className="badge badge-error">{validationError}</span>
+                <span className="badge bg-red-50 border border-red-200 text-red-700 rounded-full px-3.5 py-1 inline-flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  {validationError}
+                </span>
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onClear?.(); }}
@@ -106,7 +109,10 @@ export function FileDropzone({
               </>
             ) : (
               <>
-                <span className="badge badge-success">Ready</span>
+                <span className="badge bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full px-3.5 py-1 inline-flex items-center gap-1.5">
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  Ready
+                </span>
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onClear?.(); }}
