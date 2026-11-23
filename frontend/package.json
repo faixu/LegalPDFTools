@@ -2,9 +2,12 @@
   "name": "legalpdftools-frontend",
   "version": "1.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "vite",
-    "build": "node node_modules/typescript/bin/tsc && node node_modules/vite/bin/vite.js build",
+    "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
@@ -14,8 +17,7 @@
     "react-dropzone": "^14.2.3",
     "react-pdf": "^9.1.0",
     "react-router-dom": "^6.27.0",
-    "lucide-react": "^0.454.0",
-    "@rollup/rollup-linux-x64-gnu": "^4.24.0"
+    "lucide-react": "^0.454.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
@@ -28,5 +30,8 @@
     "eslint-plugin-react-refresh": "^0.4.14",
     "@eslint/js": "^9.13.0",
     "globals": "^15.11.0"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.24.0"
   }
 }
