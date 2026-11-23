@@ -16,6 +16,8 @@ import {
   ExternalLink,
   Settings,
   Check,
+  Download,
+  RotateCcw,
 } from 'lucide-react';
 import { FileDropzone } from '../components/FileDropzone';
 import { PreviewViewer } from '../components/PreviewViewer';
@@ -225,7 +227,9 @@ startxref
 
   const canProcess = file && !isProcessing && !resultBlob;
 
-  const previewTitle = resultBlob ? 'Processed Document' : useSample ? 'Sample Legal Exhibit (3 pages)' : 'Original Document';
+  // Determine which column is "left" (config) and which is "right" (preview)
+  // On desktop: config left (sticky), preview right
+  // On mobile: stacked with config on top
 
   return (
     <div className="min-h-screen bg-white">
@@ -327,7 +331,7 @@ startxref
       </div>
 
       <main className="flex-1">
-        {/* Editorial Hero + Two-Column Workspace */}
+        {/* Editorial Hero */}
         <section className="pt-10 pb-8 text-center max-w-3xl mx-auto px-4">
           <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
             Bates Stamp & Permanently Redact PDFs
@@ -337,273 +341,328 @@ startxref
           </p>
         </section>
 
-        {/* Two-Column Processing Workspace */}
-        <section className="max-w-6xl mx-auto px-4 pb-16">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Left Column - Upload & Canvas */}
-            <div className="lg:col-span-7">
-              <div className="card">
-                <FileDropzone
-                  onFileSelect={handleFileSelect}
-                  onClear={handleFileClear}
-                  currentFile={file}
-                  disabled={isProcessing || !!resultBlob}
-                />
-              </div>
-
-              {/* Sample file link */}
-              <div className="mt-4 text-center">
-                <button
-                  type="button"
-                  onClick={loadSample}
-                  className="dropzone-link"
-                  disabled={isProcessing || !!file || !!resultBlob}
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    ✨ Try with a sample 3-page legal exhibit
-                  </span>
-                </button>
-              </div>
-
-              {/* Progress Indicator */}
-              <ProgressIndicator
-                progress={progress}
-                status={isProcessing ? 'processing' : resultBlob ? 'complete' : error ? 'error' : 'idle'}
-                message={isProcessing ? 'Applying Bates numbers...' : error || undefined}
-                details={result ? { pageCount: result.pageCount, processingTimeMs: result.processingTimeMs, fileSize: result.blob.size } : undefined}
-                onReset={handleReset}
-              />
-
-              {/* PDF Preview */}
-              <PreviewViewer
-                fileUrl={previewUrl || undefined}
-                fileName={resultBlob ? `processed_${file?.name}` : useSample ? 'Sample Legal Exhibit (3 pages)' : file?.name}
-                title={previewTitle}
-                onDownload={handleDownload}
-                onRemove={handleFileClear}
-                processing={isProcessing}
-                error={error}
-              />
-            </div>
-
-            {/* Right Column - Processing Options */}
-            <div className="lg:col-span-5">
-              <div className="card sticky top-24">
-                <div className="flex items-center gap-2 mb-6">
-                  <div className="icon-badge icon-badge-blue p-2">
-                    <Settings className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-900">Processing Options</h3>
+        {/* Two-Column Workspace */}
+        <section className="max-w-7xl mx-auto px-4 pb-16">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* LEFT COLUMN: Config Panel (sticky) - ~35% width */}
+            <aside className="lg:col-span-4 order-2 lg:order-1">
+              <div className="sticky top-24 space-y-6">
+                {/* File Upload Card */}
+                <div className="card">
+                  <FileDropzone
+                    onFileSelect={handleFileSelect}
+                    onClear={handleFileClear}
+                    currentFile={file}
+                    disabled={isProcessing || !!resultBlob}
+                    compact={!!file}
+                  />
                 </div>
 
-                <div className="space-y-5">
-                  {/* Enable Bates Toggle */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="form-label">Enable Bates Numbering</label>
-                      <p className="text-xs text-slate-500 mt-0.5">Add sequential page numbers to each page</p>
+                {/* Sample file link - only show when no file loaded */}
+                {!file && !resultBlob && (
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      onClick={loadSample}
+                      className="dropzone-link"
+                      disabled={isProcessing}
+                    >
+                      <span className="inline-flex items-center gap-1.5">
+                        ✨ Try with a sample 3-page legal exhibit
+                      </span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Progress Indicator (compact when file loaded) */}
+                <ProgressIndicator
+                  progress={progress}
+                  status={isProcessing ? 'processing' : resultBlob ? 'complete' : error ? 'error' : 'idle'}
+                  message={isProcessing ? 'Applying Bates numbers...' : error || undefined}
+                  details={result ? { pageCount: result.pageCount, processingTimeMs: result.processingTimeMs, fileSize: result.blob.size } : undefined}
+                  onReset={handleReset}
+                  compact={!!file}
+                />
+
+                {/* Config Card - Sticky */}
+                <div className="card sticky top-24">
+                  <div className="flex items-center gap-2 mb-6">
+                    <div className="icon-badge icon-badge-blue p-2">
+                      <Settings className="w-5 h-5" />
                     </div>
-                    <input
-                      type="checkbox"
-                      className="checkbox-input"
-                      checked={config.enableBates}
-                      onChange={(e) => setConfig({ ...config, enableBates: e.target.checked })}
-                    />
+                    <h3 className="text-lg font-bold text-slate-900">Processing Options</h3>
                   </div>
 
-                  {config.enableBates && (
-                    <>
-                      {/* Prefix & Suffix */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="form-label">Prefix</label>
-                          <input
-                            type="text"
-                            className="form-input font-mono"
-                            placeholder="CASE-"
-                            value={config.prefix}
-                            onChange={(e) => setConfig({ ...config, prefix: e.target.value })}
-                            disabled={!config.enableBates}
-                          />
-                        </div>
-                        <div>
-                          <label className="form-label">Suffix (optional)</label>
-                          <input
-                            type="text"
-                            className="form-input font-mono"
-                            placeholder=""
-                            value={config.suffix}
-                            onChange={(e) => setConfig({ ...config, suffix: e.target.value })}
-                            disabled={!config.enableBates}
-                          />
-                        </div>
+                  <div className="space-y-5">
+                    {/* Enable Bates Toggle */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className="form-label">Enable Bates Numbering</label>
+                        <p className="text-xs text-slate-500 mt-0.5">Add sequential page numbers to each page</p>
                       </div>
+                      <input
+                        type="checkbox"
+                        className="checkbox-input"
+                        checked={config.enableBates}
+                        onChange={(e) => setConfig({ ...config, enableBates: e.target.checked })}
+                      />
+                    </div>
 
-                      {/* Start Number & Zero Padding */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="form-label">Start Number</label>
-                          <input
-                            type="number"
-                            className="form-input"
-                            min="1"
-                            max="999999"
-                            value={config.startNumber}
-                            onChange={(e) => setConfig({ ...config, startNumber: parseInt(e.target.value) || 1 })}
-                            disabled={!config.enableBates}
-                          />
-                        </div>
-                        <div>
-                          <label className="form-label">Zero Padding</label>
-                          <select
-                            className="form-select"
-                            value={config.zeroPadding}
-                            onChange={(e) => setConfig({ ...config, zeroPadding: parseInt(e.target.value) })}
-                            disabled={!config.enableBates}
-                          >
-                            <option value={4}>4 digits (0001)</option>
-                            <option value={6}>6 digits (000001)</option>
-                            <option value={7}>7 digits (0000001)</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      {/* Font & Font Size */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="form-label">Font</label>
-                          <select
-                            className="form-select"
-                            value={config.font}
-                            onChange={(e) => setConfig({ ...config, font: e.target.value })}
-                            disabled={!config.enableBates}
-                          >
-                            <option value="tiro">Times Roman</option>
-                            <option value="helv">Helvetica</option>
-                            <option value="cour">Courier</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="form-label">Font Size</label>
-                          <select
-                            className="form-select"
-                            value={config.fontSize}
-                            onChange={(e) => setConfig({ ...config, fontSize: parseInt(e.target.value) })}
-                            disabled={!config.enableBates}
-                          >
-                            <option value={9}>9pt</option>
-                            <option value={10}>10pt</option>
-                            <option value={11}>11pt</option>
-                            <option value={12}>12pt</option>
-                            <option value={14}>14pt</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      {/* Color & Position */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="form-label">Color</label>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="color"
-                              className="w-10 h-10 rounded-lg border border-slate-300 cursor-pointer"
-                              value={config.color}
-                              onChange={(e) => setConfig({ ...config, color: e.target.value })}
-                              disabled={!config.enableBates}
-                            />
+                    {config.enableBates && (
+                      <>
+                        {/* Prefix & Suffix */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="form-label">Prefix</label>
                             <input
                               type="text"
-                              className="form-input font-mono text-sm flex-1"
-                              value={config.color}
-                              onChange={(e) => {
-                                if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
-                                  setConfig({ ...config, color: e.target.value });
-                                }
-                              }}
+                              className="form-input font-mono"
+                              placeholder="CASE-"
+                              value={config.prefix}
+                              onChange={(e) => setConfig({ ...config, prefix: e.target.value })}
                               disabled={!config.enableBates}
-                              placeholder="#000000"
-                              pattern="#[0-9A-Fa-f]{6}"
+                            />
+                          </div>
+                          <div>
+                            <label className="form-label">Suffix (optional)</label>
+                            <input
+                              type="text"
+                              className="form-input font-mono"
+                              placeholder=""
+                              value={config.suffix}
+                              onChange={(e) => setConfig({ ...config, suffix: e.target.value })}
+                              disabled={!config.enableBates}
                             />
                           </div>
                         </div>
-                        <div>
-                          <label className="form-label">Position</label>
-                          <select
-                            className="form-select"
-                            value={config.position}
-                            onChange={(e) => setConfig({ ...config, position: e.target.value })}
-                            disabled={!config.enableBates}
-                          >
-                            <option value="bottom_right">Bottom-Right</option>
-                            <option value="bottom_center">Bottom-Center</option>
-                            <option value="bottom_left">Bottom-Left</option>
-                            <option value="top_right">Top-Right</option>
-                            <option value="top_center">Top-Center</option>
-                            <option value="top_left">Top-Left</option>
-                          </select>
+
+                        {/* Start Number & Zero Padding */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="form-label">Start Number</label>
+                            <input
+                              type="number"
+                              className="form-input"
+                              min="1"
+                              max="999999"
+                              value={config.startNumber}
+                              onChange={(e) => setConfig({ ...config, startNumber: parseInt(e.target.value) || 1 })}
+                              disabled={!config.enableBates}
+                            />
+                          </div>
+                          <div>
+                            <label className="form-label">Zero Padding</label>
+                            <select
+                              className="form-select"
+                              value={config.zeroPadding}
+                              onChange={(e) => setConfig({ ...config, zeroPadding: parseInt(e.target.value) })}
+                              disabled={!config.enableBates}
+                            >
+                              <option value={4}>4 digits (0001)</option>
+                              <option value={6}>6 digits (000001)</option>
+                              <option value={7}>7 digits (0000001)</option>
+                            </select>
+                          </div>
                         </div>
-                      </div>
-                    </>
-                  )}
 
-                  {/* Live Preview Box */}
-                  <div className="live-preview">
-                    <div className="live-preview-title">Live Preview</div>
-                    <div className="live-preview-value">
-                      {config.enableBates
-                        ? `${config.prefix}${String(config.startNumber).padStart(config.zeroPadding, '0')}${config.suffix}`
-                        : 'Bates numbering disabled'}
-                    </div>
-                  </div>
+                        {/* Font & Font Size */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="form-label">Font</label>
+                            <select
+                              className="form-select"
+                              value={config.font}
+                              onChange={(e) => setConfig({ ...config, font: e.target.value })}
+                              disabled={!config.enableBates}
+                            >
+                              <option value="tiro">Times Roman</option>
+                              <option value="helv">Helvetica</option>
+                              <option value="cour">Courier</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="form-label">Font Size</label>
+                            <select
+                              className="form-select"
+                              value={config.fontSize}
+                              onChange={(e) => setConfig({ ...config, fontSize: parseInt(e.target.value) })}
+                              disabled={!config.enableBates}
+                            >
+                              <option value={9}>9pt</option>
+                              <option value={10}>10pt</option>
+                              <option value={11}>11pt</option>
+                              <option value={12}>12pt</option>
+                              <option value={14}>14pt</option>
+                            </select>
+                          </div>
+                        </div>
 
-                  {/* Scrub Metadata */}
-                  <div className="checkbox-wrapper">
-                    <input
-                      type="checkbox"
-                      className="checkbox-input"
-                      checked={config.scrubMetadata}
-                      onChange={(e) => setConfig({ ...config, scrubMetadata: e.target.checked })}
-                    />
-                    <label className="checkbox-label">
-                      <strong>Scrub Document Metadata & Annotations</strong>
-                      <span className="text-slate-500"> — Removes author, creation date, comments, and hidden layers.</span>
-                    </label>
-                  </div>
-
-                  {/* Primary Action Button */}
-                  <button
-                    type="button"
-                    className="btn btn-primary w-full py-3"
-                    onClick={handleProcess}
-                    disabled={!canProcess}
-                  >
-                    {isProcessing ? (
-                      <>
-                        <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Processing...
+                        {/* Color & Position */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="form-label">Color</label>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="color"
+                                className="w-10 h-10 rounded-lg border border-slate-300 cursor-pointer"
+                                value={config.color}
+                                onChange={(e) => setConfig({ ...config, color: e.target.value })}
+                                disabled={!config.enableBates}
+                              />
+                              <input
+                                type="text"
+                                className="form-input font-mono text-sm flex-1"
+                                value={config.color}
+                                onChange={(e) => {
+                                  if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+                                    setConfig({ ...config, color: e.target.value });
+                                  }
+                                }}
+                                disabled={!config.enableBates}
+                                placeholder="#000000"
+                                pattern="#[0-9A-Fa-f]{6}"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="form-label">Position</label>
+                            <select
+                              className="form-select"
+                              value={config.position}
+                              onChange={(e) => setConfig({ ...config, position: e.target.value })}
+                              disabled={!config.enableBates}
+                            >
+                              <option value="bottom_right">Bottom-Right</option>
+                              <option value="bottom_center">Bottom-Center</option>
+                              <option value="bottom_left">Bottom-Left</option>
+                              <option value="top_right">Top-Right</option>
+                              <option value="top_center">Top-Center</option>
+                              <option value="top_left">Top-Left</option>
+                            </select>
+                          </div>
+                        </div>
                       </>
-                    ) : resultBlob ? (
-                      <>
-                        <Check className="w-5 h-5" />
-                        Done — Download Below
-                      </>
-                    ) : (
-                      'Process Document'
                     )}
-                  </button>
+
+                    {/* Live Preview Box */}
+                    <div className="live-preview">
+                      <div className="live-preview-title">Live Preview</div>
+                      <div className="live-preview-value">
+                        {config.enableBates
+                          ? `${config.prefix}${String(config.startNumber).padStart(config.zeroPadding, '0')}${config.suffix}`
+                          : 'Bates numbering disabled'}
+                      </div>
+                    </div>
+
+                    {/* Scrub Metadata */}
+                    <div className="checkbox-wrapper">
+                      <input
+                        type="checkbox"
+                        className="checkbox-input"
+                        checked={config.scrubMetadata}
+                        onChange={(e) => setConfig({ ...config, scrubMetadata: e.target.checked })}
+                      />
+                      <label className="checkbox-label">
+                        <strong>Scrub Document Metadata & Annotations</strong>
+                        <span className="text-slate-500"> — Removes author, creation date, comments, and hidden layers.</span>
+                      </label>
+                    </div>
+
+                    {/* Primary Action Button */}
+                    <button
+                      type="button"
+                      className="btn btn-primary w-full py-3"
+                      onClick={handleProcess}
+                      disabled={!canProcess}
+                    >
+                      {isProcessing ? (
+                        <>
+                          <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Processing...
+                        </>
+                      ) : resultBlob ? (
+                        <>
+                          <Check className="w-5 h-5" />
+                          Done — Download Below
+                        </>
+                      ) : (
+                        'Process Document'
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            </aside>
+
+            {/* RIGHT COLUMN: PDF Preview - ~65% width */}
+            <main className="lg:col-span-8 order-1 lg:order-2">
+              {/* File header / compact dropzone handled by FileDropzone in compact mode */}
+              <div className="card">
+                <PreviewViewer
+                  fileUrl={previewUrl || undefined}
+                  fileName={resultBlob ? `processed_${file?.name}` : useSample ? 'Sample Legal Exhibit (3 pages)' : file?.name}
+                  title={resultBlob ? 'Processed Document' : useSample ? 'Sample Legal Exhibit (3 pages)' : 'Original Document'}
+                  onDownload={handleDownload}
+                  onRemove={handleFileClear}
+                  processing={isProcessing}
+                  error={error}
+                />
+              </div>
+
+              {/* Progress Indicator (non-compact for main area) - only show when processing or error without file */}
+              {!file && (
+                <ProgressIndicator
+                  progress={progress}
+                  status={isProcessing ? 'processing' : resultBlob ? 'complete' : error ? 'error' : 'idle'}
+                  message={isProcessing ? 'Applying Bates numbers...' : error || undefined}
+                  details={result ? { pageCount: result.pageCount, processingTimeMs: result.processingTimeMs, fileSize: result.blob.size } : undefined}
+                  onReset={handleReset}
+                  compact={false}
+                />
+              )}
+
+              {/* Status bar for completed processing (compact at bottom of preview) */}
+              {resultBlob && result && (
+                <ProgressIndicator
+                  progress={100}
+                  status="complete"
+                  details={{ pageCount: result.pageCount, processingTimeMs: result.processingTimeMs, fileSize: result.blob.size }}
+                  onReset={handleReset}
+                  compact={true}
+                />
+              )}
+
+              {/* Actions row for processed document */}
+              {resultBlob && (
+                <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-slate-200">
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={handleDownload}
+                  >
+                    <Download className="w-4 h-4" />
+                    Download PDF
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={handleReset}
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Process Another
+                  </button>
+                </div>
+              )}
+            </main>
           </div>
         </section>
 
         {/* Common Legal Workflows */}
         <section className="mt-20 pt-16 border-t border-slate-200 bg-slate-50/50 pb-20">
-          <div className="max-w-6xl mx-auto px-4">
+          <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-10">
               <h2 className="text-3xl font-extrabold text-slate-900">Common Legal Workflows</h2>
               <p className="text-slate-600 mt-2">Pre-configured tools for your specific practice area.</p>

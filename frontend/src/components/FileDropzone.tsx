@@ -9,6 +9,7 @@ interface FileDropzoneProps {
   disabled?: boolean;
   currentFile?: File | null;
   onClear?: () => void;
+  compact?: boolean;
 }
 
 const DEFAULT_ACCEPTED = {
@@ -24,6 +25,7 @@ export function FileDropzone({
   disabled = false,
   currentFile,
   onClear,
+  compact = false,
 }: FileDropzoneProps) {
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,8 +77,61 @@ export function FileDropzone({
     noKeyboard: disabled,
   });
 
-  // If there's already a file selected, show it
-  if (currentFile) {
+  // Compact mode: show as a sleek file header bar
+  if (compact && currentFile) {
+    const validationError = validateFile(currentFile);
+    return (
+      <div className="bg-white border border-slate-200 rounded-xl p-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="flex-shrink-0 bg-blue-50 text-blue-600 rounded-lg p-2">
+              <FileText className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-medium truncate text-slate-900">{currentFile.name}</p>
+              <p className="text-xs text-slate-500">{formatSize(currentFile.size)}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {validationError ? (
+              <>
+                <span className="badge bg-red-50 border border-red-200 text-red-700 rounded-full px-2.5 py-1 inline-flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {validationError}
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onClear?.(); }}
+                  className="btn btn-outline btn-sm p-1.5"
+                  aria-label="Remove file"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="badge bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full px-2.5 py-1 inline-flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3" />
+                  Ready
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onClear?.(); }}
+                  className="btn btn-outline btn-sm p-1.5"
+                  aria-label="Remove file"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If there's already a file selected (non-compact), show it
+  if (currentFile && !compact) {
     const validationError = validateFile(currentFile);
     return (
       <div className="dropzone" {...getRootProps()}>
@@ -129,6 +184,7 @@ export function FileDropzone({
     );
   }
 
+  // Empty state - full dropzone
   return (
     <div
       {...getRootProps()}
